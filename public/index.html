@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CodeAlpha Store - Task 1</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; }
+        header { display: flex; justify-content: space-between; align-items: center; background: #222; color: #fff; padding: 15px 25px; border-radius: 5px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
+        .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 4px; }
+        button { background: #28a745; color: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 4px; margin-top: 5px;}
+        button:hover { background: #218838; }
+        #cart-section { margin-top: 30px; background: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>CodeAlpha E-Commerce</h2>
+        <div>Cart Items: <span id="cart-count">0</span></div>
+    </header>
+
+    <h2>Product Catalog</h2>
+    <div class="product-grid" id="product-list">Loading products...</div>
+
+    <div id="cart-section">
+        <h3>Shopping Cart</h3>
+        <div id="cart-items">Your cart is empty.</div>
+        <h4>Total: ₹<span id="cart-total">0</span></h4>
+        <button onclick="checkout()" style="background: #007bff;">Process Order</button>
+    </div>
+
+    <script>
+        const API = 'http://localhost:5000/api';
+        let cart = [];
+
+        async function fetchProducts() {
+            const res = await fetch(`${API}/products`);
+            const products = await res.json();
+            const grid = document.getElementById('product-list');
+            grid.innerHTML = '';
+            products.forEach(p => {
+                grid.innerHTML += `
+                    <div class="card">
+                        <img src="${p.imageUrl}" alt="${p.title}">
+                        <h4>${p.title}</h4>
+                        <p>${p.description}</p>
+                        <p><strong>₹${p.price}</strong></p>
+                        <button onclick='addToCart(${JSON.stringify(p)})'>Add to Cart</button>
+                    </div>
+                `;
+            });
+        }
+
+        function addToCart(product) {
+            cart.push(product);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = cart.length;
+            const container = document.getElementById('cart-items');
+            if (cart.length === 0) {
+                container.innerHTML = 'Your cart is empty.';
+                document.getElementById('cart-total').innerText = 0;
+                return;
+            }
+            container.innerHTML = '';
+            let total = 0;
+            cart.forEach(item => {
+                total += item.price;
+                container.innerHTML += `<div>${item.title} - ₹${item.price}</div>`;
+            });
+            document.getElementById('cart-total').innerText = total;
+        }
+
+        async function checkout() {
+            if (cart.length === 0) {
+                alert('Your cart is empty!');
+                return;
+            }
+            const totalAmount = cart.reduce((sum, item) => sum + item.price, 0);
+            const res = await fetch(`${API}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerEmail: 'intern@codealpha.com',
+                    items: cart,
+                    totalAmount,
+                    shippingAddress: 'Greater Noida, India'
+                })
+            });
+            const data = await res.json();
+            alert(data.message + ' Order ID: ' + data.orderId);
+            cart = [];
+            updateCartUI();
+        }
+
+        fetchProducts();
+    </script>
+</body>
+</html>
